@@ -63,7 +63,15 @@ class Game {
     const ratio = window.devicePixelRatio || 1;
     this.canvas.width = Math.floor(rect.width * ratio);
     this.canvas.height = Math.floor(rect.height * ratio);
-    this.state.cellSize = Math.floor(this.canvas.width / this.state.gridSize);
+    // store CSS (layout) size for drawing in transformed coordinates
+    this.cssWidth = rect.width;
+    this.cssHeight = rect.height;
+    // cellSize should be in CSS pixels because we set a transform to map
+    // CSS pixels to device pixels. Using canvas.width (device pixels)
+    // produced a mismatch where drawn cells appeared larger than the
+    // logical grid and collisions still used the logical grid size.
+    this.state.cellSize = Math.floor(this.cssWidth / this.state.gridSize);
+    // scale the drawing context so 1 unit == 1 CSS pixel
     this.ctx.setTransform(ratio,0,0,ratio,0,0);
   }
 
@@ -172,10 +180,13 @@ class Game {
     const size = s.gridSize;
     const cs = s.cellSize;
     // clear
-    ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+    // use CSS sizes because the context is transformed to CSS pixels
+    const w = this.cssWidth || (this.canvas.width);
+    const h = this.cssHeight || (this.canvas.height);
+    ctx.clearRect(0,0,w,h);
     // draw grid subtle
     ctx.fillStyle = '#04060b';
-    ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+    ctx.fillRect(0,0,w,h);
 
     // draw food
     if (s.food) {
