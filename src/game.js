@@ -196,10 +196,11 @@ class Game {
     ctx.fillStyle = '#04060b';
     ctx.fillRect(0,0,w,h);
 
-    // draw food
+    // draw food (bait) - make it yellow
     if (s.food) {
-      ctx.fillStyle = 'rgba(255,88,198,0.95)';
-      ctx.shadowColor = 'rgba(255,88,198,0.6)';
+      // use a bright yellow for the bait
+      ctx.fillStyle = '#FFFF00';
+      ctx.shadowColor = 'rgba(255,255,0,0.65)';
       ctx.shadowBlur = 12;
       ctx.fillRect(s.food.x*cs + 2, s.food.y*cs + 2, cs-4, cs-4);
       ctx.shadowBlur = 0;
