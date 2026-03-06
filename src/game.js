@@ -30,7 +30,14 @@ class Game {
     this.ui = ui;
     this.state = createInitialState();
     this.resizeCanvas();
-    window.addEventListener('resize',()=>this.resizeCanvas());
+    // Lock the canvas CSS size so the visible game area does NOT grow
+    // between rounds (prevents responsive rules from enlarging it).
+    // Set inline width/height in CSS pixels which overrides stylesheet
+    // responsive sizing. We intentionally do not listen to window resize
+    // after this so the game area remains constant for subsequent games.
+    const rect = this.canvas.getBoundingClientRect();
+    this.canvas.style.width = `${Math.round(rect.width)}px`;
+    this.canvas.style.height = `${Math.round(rect.height)}px`;
     this.placeFood();
     this.raf = null;
   }
