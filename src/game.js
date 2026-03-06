@@ -44,6 +44,7 @@ class Game {
 
   reset() {
     this.state = createInitialState();
+    this.resizeCanvas();
     this.placeFood();
     this.ui.updateHUD(this.state.score, this.state.highScore);
   }
