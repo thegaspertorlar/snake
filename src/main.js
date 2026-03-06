@@ -60,7 +60,9 @@ window.addEventListener('keydown',(e)=>{
     // start / restart
     if (!game.state.running) {
       if (game.state.gameOver) game.reset();
-      ui.showStart(loadBoard());
+      // hide overlays and start
+      startScreen.classList.add('hidden');
+      gameOverScreen.classList.add('hidden');
       game.start();
     }
     e.preventDefault();
