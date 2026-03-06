@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Snake — Neon Retro</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="header">
+        <h1 class="title">NEON SNAKE</h1>
+        <div class="controls">
+          <button id="muteBtn" class="btn">Mute</button>
+        </div>
+      </header>
+
+      <main class="main">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+        <div id="overlay" class="overlay">
+          <div id="startScreen" class="screen">
+            <h2>Press SPACE to Start</h2>
+            <div id="leaderboardStart" class="leaderboard box"></div>
+            <p class="hint">Use Arrow Keys or WASD</p>
+          </div>
+
+          <div id="gameOverScreen" class="screen hidden">
+            <h2>Game Over</h2>
+            <p id="finalScore" class="score"></p>
+            <div id="leaderboardGameOver" class="leaderboard box"></div>
+            <p class="hint">Press SPACE to Restart</p>
+          </div>
+        </div>
+
+      </main>
+
+      <footer class="hud">
+        <div>Score: <span id="score">0</span></div>
+        <div>High: <span id="highScore">0</span></div>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
