@@ -42,6 +42,8 @@ function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<
 const game = new Game(canvas, ui);
 // sync audio engine mute with UI
 const audioEngine = game.state.audio;
+// ensure initial button label reflects current state
+if (muteBtn) muteBtn.textContent = audioEngine.isMuted() ? 'Unmute' : 'Mute';
 
 function init() {
   ui.showStart(loadBoard());

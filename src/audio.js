@@ -1,12 +1,18 @@
 // Web Audio API based simple synthesizer for SFX
 export default function createAudioEngine() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  // master gain lets us mute/unmute instantly and reliably
+  const master = ctx.createGain();
+  master.gain.value = 1;
+  master.connect(ctx.destination);
   let muted = false;
 
   function gain(amount = 0.2) {
     const g = ctx.createGain();
+    // individual gains are multiplied by master gain, but initialize
+    // them correctly so envelopes start from the right level
     g.gain.value = muted ? 0 : amount;
-    g.connect(ctx.destination);
+    g.connect(master);
     return g;
   }
 
@@ -30,7 +36,7 @@ export default function createAudioEngine() {
     o.frequency.value = 880;
     g.gain.value = muted ? 0 : 0.12;
     o.connect(g);
-    g.connect(ctx.destination);
+    g.connect(master);
     g.gain.setValueAtTime(0.0001, now);
     g.gain.exponentialRampToValueAtTime(muted ? 0 : 0.12, now + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
@@ -48,7 +54,7 @@ export default function createAudioEngine() {
     o.frequency.exponentialRampToValueAtTime(120, now + 0.8);
     g.gain.value = muted ? 0 : 0.18;
     o.connect(g);
-    g.connect(ctx.destination);
+    g.connect(master);
     g.gain.setValueAtTime(g.gain.value, now);
     g.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
     o.start(now);
@@ -66,7 +72,7 @@ export default function createAudioEngine() {
       o.frequency.value = n;
       g.gain.value = muted ? 0 : 0.12;
       o.connect(g);
-      g.connect(ctx.destination);
+      g.connect(master);
       g.gain.setValueAtTime(0.0001, now + i * 0.12);
       g.gain.exponentialRampToValueAtTime(g.gain.value, now + i * 0.12 + 0.01);
       g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.12 + 0.22);
@@ -82,6 +88,11 @@ export default function createAudioEngine() {
 
   function toggleMute() {
     muted = !muted;
+    // apply to master gain for immediate effect. Use a short ramp to avoid clicks.
+    const now = ctx.currentTime;
+    const target = muted ? 0.0001 : 1;
+    master.gain.setValueAtTime(master.gain.value, now);
+    master.gain.exponentialRampToValueAtTime(target, now + 0.01);
   }
 
   function isMuted() { return muted; }
