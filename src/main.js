@@ -41,15 +41,20 @@ function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<
 
 const game = new Game(canvas, ui);
 
+const btnLabel = muteBtn.querySelector('.btnLabel');
+
+function updateMuteUI(ae){
+  if (!ae || typeof ae.isMuted !== 'function') return;
+  const muted = ae.isMuted();
+  if (btnLabel) btnLabel.textContent = muted ? 'Unmute' : 'Mute';
+  if (muted) muteBtn.classList.add('muted'); else muteBtn.classList.remove('muted');
+}
+
 function init() {
   ui.showStart(loadBoard());
   ui.updateHUD(0, loadHighScore());
   // ensure mute button reflects current audio engine state
-  try {
-    muteBtn.textContent = game.state.audio.isMuted() ? 'Unmute' : 'Mute';
-  } catch (e) {
-    muteBtn.textContent = 'Mute';
-  }
+  try { updateMuteUI(game.state.audio); } catch (e) { if (btnLabel) btnLabel.textContent = 'Mute'; }
 }
 
 init();
@@ -79,7 +84,7 @@ muteBtn.addEventListener('click', async ()=>{
   if (!ae) return;
   await ae.resume();
   ae.toggleMute();
-  muteBtn.textContent = ae.isMuted() ? 'Unmute' : 'Mute';
+  updateMuteUI(ae);
 });
 
 // pointer to keep canvas focused for key events on some browsers
