@@ -40,10 +40,14 @@ function renderBoard(board) {
 function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 const game = new Game(canvas, ui);
-// sync audio engine mute with UI
-const audioEngine = game.state.audio;
+// audio engine lives on game.state and may be recreated on reset.
+// Use a getter so UI always targets the current engine.
+function getAudioEngine(){ return game.state.audio; }
 // ensure initial button label reflects current state
-if (muteBtn) muteBtn.textContent = audioEngine.isMuted() ? 'Unmute' : 'Mute';
+if (muteBtn) {
+  const ae = getAudioEngine();
+  muteBtn.textContent = ae && typeof ae.isMuted === 'function' && ae.isMuted() ? 'Unmute' : 'Mute';
+}
 
 function init() {
   ui.showStart(loadBoard());
@@ -72,9 +76,11 @@ window.addEventListener('keydown',(e)=>{
 });
 
 muteBtn.addEventListener('click', async ()=>{
-  await audioEngine.resume();
-  audioEngine.toggleMute();
-  muteBtn.textContent = audioEngine.isMuted() ? 'Unmute' : 'Mute';
+  const ae = getAudioEngine();
+  if (!ae) return;
+  await ae.resume();
+  ae.toggleMute();
+  muteBtn.textContent = ae.isMuted() ? 'Unmute' : 'Mute';
 });
 
 // pointer to keep canvas focused for key events on some browsers
