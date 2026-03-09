@@ -45,7 +45,12 @@ class Game {
   }
 
   reset() {
+    // preserve mute state across resets so user preference remains
+    const oldMuted = this.state && this.state.audio && typeof this.state.audio.isMuted === 'function' ? this.state.audio.isMuted() : false;
     this.state = createInitialState();
+    if (oldMuted && this.state && this.state.audio && typeof this.state.audio.toggleMute === 'function') {
+      try { this.state.audio.toggleMute(); } catch (e) {}
+    }
     this.resizeCanvas();
     this.placeFood();
     this.ui.updateHUD(this.state.score, this.state.highScore);

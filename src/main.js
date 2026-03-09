@@ -40,18 +40,16 @@ function renderBoard(board) {
 function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 const game = new Game(canvas, ui);
-// audio engine lives on game.state and may be recreated on reset.
-// Use a getter so UI always targets the current engine.
-function getAudioEngine(){ return game.state.audio; }
-// ensure initial button label reflects current state
-if (muteBtn) {
-  const ae = getAudioEngine();
-  muteBtn.textContent = ae && typeof ae.isMuted === 'function' && ae.isMuted() ? 'Unmute' : 'Mute';
-}
 
 function init() {
   ui.showStart(loadBoard());
   ui.updateHUD(0, loadHighScore());
+  // ensure mute button reflects current audio engine state
+  try {
+    muteBtn.textContent = game.state.audio.isMuted() ? 'Unmute' : 'Mute';
+  } catch (e) {
+    muteBtn.textContent = 'Mute';
+  }
 }
 
 init();
@@ -76,7 +74,8 @@ window.addEventListener('keydown',(e)=>{
 });
 
 muteBtn.addEventListener('click', async ()=>{
-  const ae = getAudioEngine();
+  // always operate on the current audio engine instance from game state
+  const ae = game && game.state && game.state.audio;
   if (!ae) return;
   await ae.resume();
   ae.toggleMute();
