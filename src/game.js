@@ -4,16 +4,18 @@ import {loadHighScore, saveHighScore, loadBoard, isTopScore, addScore} from './l
 const GRID_SIZE = 20;
 
 function createInitialState() {
-  return {
-    gridSize: GRID_SIZE,
-    cellSize: 20,
-    snake: [{x:10,y:10}],
-    dir: {x:0,y:0},
-    nextDir: {x:0,y:0},
-    food: null,
-    speed: 8,
-    lastMoveTime: 0,
-    score: 0,
+    return {
+      gridSize: GRID_SIZE,
+      cellSize: 20,
+      snake: [{x:10,y:10}],
+      dir: {x:0,y:0},
+      nextDir: {x:0,y:0},
+      food: null,
+      speed: 8,
+      // number of food items (bait) eaten this round
+      foodEaten: 0,
+      lastMoveTime: 0,
+      score: 0,
     running: false,
     gameOver: false,
     highScore: loadHighScore(),
@@ -134,8 +136,15 @@ class Game {
     // eat food
     if (s.food && head.x === s.food.x && head.y === s.food.y) {
       s.score += 10;
+      // increment bait counter
+      s.foodEaten = (s.foodEaten || 0) + 1;
       s.audio.playEat();
       this.placeFood();
+      // every 5 bait eaten, increase speed by 15%
+      if (s.foodEaten % 5 === 0) {
+        // multiply speed by 1.15 and keep two decimal places for stability
+        s.speed = Math.round((s.speed * 1.15) * 100) / 100;
+      }
       if (s.score > s.highScore) {
         s.highScore = s.score;
         saveHighScore(s.highScore);
