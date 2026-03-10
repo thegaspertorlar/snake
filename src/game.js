@@ -125,11 +125,11 @@ class Game {
     head.x += s.dir.x;
     head.y += s.dir.y;
 
-    // wall collision
-    if (head.x < 0 || head.y < 0 || head.x >= s.gridSize || head.y >= s.gridSize) {
-      this.onGameOver();
-      return;
-    }
+    // wall collision removed: wrap around edges instead of dying
+    if (head.x < 0) head.x = s.gridSize - 1;
+    if (head.y < 0) head.y = s.gridSize - 1;
+    if (head.x >= s.gridSize) head.x = 0;
+    if (head.y >= s.gridSize) head.y = 0;
 
     // self collision
     for (let seg of s.snake) {
