@@ -4,14 +4,15 @@ import {loadHighScore, saveHighScore, loadBoard, isTopScore, addScore} from './l
 const GRID_SIZE = 20;
 
 function createInitialState() {
-    return {
+  return {
       gridSize: GRID_SIZE,
       cellSize: 20,
       snake: [{x:10,y:10}],
       dir: {x:0,y:0},
       nextDir: {x:0,y:0},
       food: null,
-      speed: 8,
+      // base speed increased by 10% (was 8)
+      speed: Math.round((8 * 1.10) * 100) / 100,
       // number of food items (bait) eaten this round
       foodEaten: 0,
       lastMoveTime: 0,
