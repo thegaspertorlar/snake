@@ -11,8 +11,9 @@ function createInitialState() {
       dir: {x:0,y:0},
       nextDir: {x:0,y:0},
       food: null,
-      // base speed increased by 10% (was 8)
-      speed: Math.round((8 * 1.10) * 100) / 100,
+      // base speed increased by 10% (was 8). Apply global slowdown of 30% to make
+      // the snake 30% slower overall (multiply by 0.7).
+      speed: Math.round((8 * 1.10 * 0.7) * 100) / 100,
       // number of food items (bait) eaten this round
       foodEaten: 0,
       lastMoveTime: 0,
