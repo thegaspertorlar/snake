@@ -228,34 +228,87 @@ class Game {
       const isTail = i === s.snake.length - 1;
 
       if (isHead) {
-        // draw strong glowing head
-        ctx.shadowColor = 'rgba(255,255,255,0.95)';
-        ctx.shadowBlur = 18;
-        // bright outer head
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(seg.x*cs + 1, seg.y*cs + 1, cs-2, cs-2);
-        // inner neon core
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#45ff89';
-        ctx.fillRect(seg.x*cs + 3, seg.y*cs + 3, Math.max(0, cs-6), Math.max(0, cs-6));
-
-        // draw eyes to indicate direction
+        // clearer, stronger glowing head using radial gradient
+        const cx = seg.x*cs + cs/2;
+        const cy = seg.y*cs + cs/2;
+        const outerR = Math.max(6, Math.floor(cs * 0.9));
+        const innerR = Math.max(1, Math.floor(cs * 0.2));
         try {
-          const cx = seg.x*cs + cs/2;
-          const cy = seg.y*cs + cs/2;
-          const eyeOffset = Math.max(1, Math.floor(cs * 0.18));
-          let ex1 = cx - eyeOffset, ey1 = cy - eyeOffset/2;
-          let ex2 = cx - eyeOffset, ey2 = cy + eyeOffset/2;
-          // if moving, offset eyes toward movement direction
-          if (s.dir.x === 1) { ex1 = cx + eyeOffset; ex2 = cx + eyeOffset; }
-          else if (s.dir.x === -1) { ex1 = cx - eyeOffset; ex2 = cx - eyeOffset; }
-          else if (s.dir.y === 1) { ey1 = cy + eyeOffset; ey2 = cy + eyeOffset; ex1 = cx - eyeOffset/2; ex2 = cx + eyeOffset/2; }
-          else if (s.dir.y === -1) { ey1 = cy - eyeOffset; ey2 = cy - eyeOffset; ex1 = cx - eyeOffset/2; ex2 = cx + eyeOffset/2; }
+          const g = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+          g.addColorStop(0, 'rgba(255,255,255,1)');
+          g.addColorStop(0.25, '#eafff4');
+          g.addColorStop(0.45, '#45ff89');
+          g.addColorStop(1, 'rgba(69,255,137,0.06)');
+          ctx.fillStyle = g;
+        } catch (e) {
+          ctx.fillStyle = '#ffffff';
+        }
 
-          ctx.fillStyle = 'rgba(8,12,16,0.95)';
-          const r = Math.max(1, Math.floor(cs * 0.08));
-          ctx.beginPath(); ctx.arc(ex1, ey1, r, 0, Math.PI*2); ctx.fill();
-          ctx.beginPath(); ctx.arc(ex2, ey2, r, 0, Math.PI*2); ctx.fill();
+        // draw outer glowing square slightly larger for emphasis
+        ctx.shadowColor = 'rgba(69,255,137,0.9)';
+        ctx.shadowBlur = Math.max(18, Math.floor(cs * 0.9));
+        ctx.fillRect(seg.x*cs + 0.5, seg.y*cs + 0.5, cs-1, cs-1);
+        ctx.shadowBlur = 0;
+
+        // inner neon core
+        ctx.fillStyle = '#0bff74';
+        const coreInset = Math.max(3, Math.floor(cs * 0.18));
+        ctx.fillRect(seg.x*cs + coreInset, seg.y*cs + coreInset, Math.max(0, cs - coreInset*2), Math.max(0, cs - coreInset*2));
+
+        // draw a small nose/point in movement direction to make facing obvious
+        try {
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          const left = seg.x*cs + 2;
+          const top = seg.y*cs + 2;
+          const right = seg.x*cs + cs - 2;
+          const bottom = seg.y*cs + cs - 2;
+          if (s.dir.x === 1) {
+            ctx.moveTo(right, cy);
+            ctx.lineTo(right - Math.max(4, Math.floor(cs*0.22)), cy - Math.max(4, Math.floor(cs*0.14)));
+            ctx.lineTo(right - Math.max(4, Math.floor(cs*0.22)), cy + Math.max(4, Math.floor(cs*0.14)));
+          } else if (s.dir.x === -1) {
+            ctx.moveTo(left, cy);
+            ctx.lineTo(left + Math.max(4, Math.floor(cs*0.22)), cy - Math.max(4, Math.floor(cs*0.14)));
+            ctx.lineTo(left + Math.max(4, Math.floor(cs*0.22)), cy + Math.max(4, Math.floor(cs*0.14)));
+          } else if (s.dir.y === 1) {
+            ctx.moveTo(cx, bottom);
+            ctx.lineTo(cx - Math.max(4, Math.floor(cs*0.14)), bottom - Math.max(4, Math.floor(cs*0.22)));
+            ctx.lineTo(cx + Math.max(4, Math.floor(cs*0.14)), bottom - Math.max(4, Math.floor(cs*0.22)));
+          } else if (s.dir.y === -1) {
+            ctx.moveTo(cx, top);
+            ctx.lineTo(cx - Math.max(4, Math.floor(cs*0.14)), top + Math.max(4, Math.floor(cs*0.22)));
+            ctx.lineTo(cx + Math.max(4, Math.floor(cs*0.14)), top + Math.max(4, Math.floor(cs*0.22)));
+          } else {
+            // default: point up
+            ctx.moveTo(cx, top);
+            ctx.lineTo(cx - Math.max(4, Math.floor(cs*0.14)), top + Math.max(4, Math.floor(cs*0.22)));
+            ctx.lineTo(cx + Math.max(4, Math.floor(cs*0.14)), top + Math.max(4, Math.floor(cs*0.22)));
+          }
+          ctx.closePath();
+          ctx.fill();
+        } catch (e) {}
+
+        // draw larger eyes with bright highlight and dark pupil
+        try {
+          const eyeOffset = Math.max(1, Math.floor(cs * 0.22));
+          let ex1 = cx - eyeOffset, ey1 = cy - Math.floor(cs * 0.12);
+          let ex2 = cx + eyeOffset, ey2 = cy - Math.floor(cs * 0.12);
+          if (s.dir.x === 1) { ex1 = cx + eyeOffset; ex2 = cx + eyeOffset; ey1 = cy - Math.floor(cs * 0.12); ey2 = cy + Math.floor(cs * 0.12); }
+          else if (s.dir.x === -1) { ex1 = cx - eyeOffset; ex2 = cx - eyeOffset; ey1 = cy - Math.floor(cs * 0.12); ey2 = cy + Math.floor(cs * 0.12); }
+          else if (s.dir.y === 1) { ey1 = cy + eyeOffset; ey2 = cy + eyeOffset; ex1 = cx - Math.floor(cs * 0.16); ex2 = cx + Math.floor(cs * 0.16); }
+          else if (s.dir.y === -1) { ey1 = cy - eyeOffset; ey2 = cy - eyeOffset; ex1 = cx - Math.floor(cs * 0.16); ex2 = cx + Math.floor(cs * 0.16); }
+
+          const eyeR = Math.max(1, Math.floor(cs * 0.14));
+          // white sclera
+          ctx.fillStyle = 'rgba(255,255,255,0.95)';
+          ctx.beginPath(); ctx.arc(ex1, ey1, eyeR, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(ex2, ey2, eyeR, 0, Math.PI*2); ctx.fill();
+          // dark pupil
+          ctx.fillStyle = 'rgba(8,12,16,0.98)';
+          const pupR = Math.max(1, Math.floor(eyeR * 0.5));
+          ctx.beginPath(); ctx.arc(ex1, ey1, pupR, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(ex2, ey2, pupR, 0, Math.PI*2); ctx.fill();
         } catch (e) {}
 
         // reset shadow
@@ -264,13 +317,18 @@ class Game {
         continue;
       }
 
-      if (isTail) {
-        // draw a more muted tail segment
-        ctx.fillStyle = 'rgba(69,255,137,0.45)';
-        ctx.shadowColor = 'rgba(69,255,137,0.06)';
-        ctx.shadowBlur = 4;
-        // slightly smaller tail block to visually taper
-        const inset = Math.max(2, Math.floor(cs * 0.12));
+      // draw tapered tail across the last few segments to make tail direction/ending clearer
+      const tailTaper = Math.min(4, Math.max(1, s.snake.length - 1));
+      const tailStartIndex = s.snake.length - tailTaper;
+      if (i >= tailStartIndex) {
+        const idxFromTail = (s.snake.length - 1) - i; // 0 for last segment
+        // factor: 1.0 for last segment (most transparent/small), increasing for earlier
+        const factor = (idxFromTail + 1) / (tailTaper + 1);
+        const alpha = 0.25 + (0.7 * (1 - factor));
+        const inset = Math.max(1, Math.floor(cs * (0.08 + 0.18 * factor)));
+        ctx.fillStyle = `rgba(69,255,137,${alpha.toFixed(2)})`;
+        ctx.shadowColor = `rgba(69,255,137,${Math.max(0.03, 0.12 * (1-factor)).toFixed(2)})`;
+        ctx.shadowBlur = Math.max(2, Math.floor(6 * (1 - factor)));
         ctx.fillRect(seg.x*cs + inset, seg.y*cs + inset, Math.max(0, cs - inset*2), Math.max(0, cs - inset*2));
         ctx.shadowBlur = 0;
         ctx.shadowColor = 'transparent';
