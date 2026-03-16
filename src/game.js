@@ -224,13 +224,68 @@ class Game {
     // draw snake
     for (let i=0;i<s.snake.length;i++){
       const seg = s.snake[i];
+      const isHead = i === 0;
+      const isTail = i === s.snake.length - 1;
+
+      if (isHead) {
+        // draw strong glowing head
+        ctx.shadowColor = 'rgba(255,255,255,0.95)';
+        ctx.shadowBlur = 18;
+        // bright outer head
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(seg.x*cs + 1, seg.y*cs + 1, cs-2, cs-2);
+        // inner neon core
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#45ff89';
+        ctx.fillRect(seg.x*cs + 3, seg.y*cs + 3, Math.max(0, cs-6), Math.max(0, cs-6));
+
+        // draw eyes to indicate direction
+        try {
+          const cx = seg.x*cs + cs/2;
+          const cy = seg.y*cs + cs/2;
+          const eyeOffset = Math.max(1, Math.floor(cs * 0.18));
+          let ex1 = cx - eyeOffset, ey1 = cy - eyeOffset/2;
+          let ex2 = cx - eyeOffset, ey2 = cy + eyeOffset/2;
+          // if moving, offset eyes toward movement direction
+          if (s.dir.x === 1) { ex1 = cx + eyeOffset; ex2 = cx + eyeOffset; }
+          else if (s.dir.x === -1) { ex1 = cx - eyeOffset; ex2 = cx - eyeOffset; }
+          else if (s.dir.y === 1) { ey1 = cy + eyeOffset; ey2 = cy + eyeOffset; ex1 = cx - eyeOffset/2; ex2 = cx + eyeOffset/2; }
+          else if (s.dir.y === -1) { ey1 = cy - eyeOffset; ey2 = cy - eyeOffset; ex1 = cx - eyeOffset/2; ex2 = cx + eyeOffset/2; }
+
+          ctx.fillStyle = 'rgba(8,12,16,0.95)';
+          const r = Math.max(1, Math.floor(cs * 0.08));
+          ctx.beginPath(); ctx.arc(ex1, ey1, r, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(ex2, ey2, r, 0, Math.PI*2); ctx.fill();
+        } catch (e) {}
+
+        // reset shadow
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+        continue;
+      }
+
+      if (isTail) {
+        // draw a more muted tail segment
+        ctx.fillStyle = 'rgba(69,255,137,0.45)';
+        ctx.shadowColor = 'rgba(69,255,137,0.06)';
+        ctx.shadowBlur = 4;
+        // slightly smaller tail block to visually taper
+        const inset = Math.max(2, Math.floor(cs * 0.12));
+        ctx.fillRect(seg.x*cs + inset, seg.y*cs + inset, Math.max(0, cs - inset*2), Math.max(0, cs - inset*2));
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+        continue;
+      }
+
+      // body segments (gradient)
       const t = 1 - (i / Math.max(1, s.snake.length));
       const neon = `rgba(${Math.floor(69 + (1-t)*30)},${Math.floor(255 - (t*40))},${Math.floor(137 + (t*40))},1)`;
       ctx.fillStyle = neon;
-      ctx.shadowColor = 'rgba(69,255,137,0.25)';
+      ctx.shadowColor = 'rgba(69,255,137,0.18)';
       ctx.shadowBlur = 8;
       ctx.fillRect(seg.x*cs + 1, seg.y*cs + 1, cs-2, cs-2);
       ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
     }
     // HUD overlay handled separately
   }
