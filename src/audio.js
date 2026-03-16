@@ -47,6 +47,40 @@ export default function createAudioEngine() {
     o.stop(now + 0.13);
   }
 
+  function playChomp() {
+    // short crunchy chomp: two quick clicks + low body
+    const now = ctx.currentTime;
+    // low body thump
+    const o1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
+    o1.type = 'sawtooth';
+    o1.frequency.setValueAtTime(220, now);
+    o1.frequency.exponentialRampToValueAtTime(120, now + 0.12);
+    g1.gain.value = 0.12;
+    o1.connect(g1);
+    g1.connect(ctx.destination);
+    g1.gain.setValueAtTime(g1.gain.value, now);
+    g1.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    o1.start(now);
+    o1.stop(now + 0.22);
+
+    // two quick high clicks
+    const clicks = [0, 0.06];
+    clicks.forEach((when, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = i === 0 ? 'square' : 'triangle';
+      o.frequency.value = 1200 + i * 200;
+      g.gain.value = 0.06;
+      o.connect(g);
+      g.connect(ctx.destination);
+      g.gain.setValueAtTime(g.gain.value, now + when);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + when + 0.08);
+      o.start(now + when);
+      o.stop(now + when + 0.09);
+    });
+  }
+
   function playGameOver() {
     // descending tone
     const now = ctx.currentTime;
