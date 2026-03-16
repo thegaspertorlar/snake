@@ -29,7 +29,7 @@ function createInitialState() {
     eatAnimDuration: 900,
     tailTaperSegments: 6,
     particles: [],
-    obstacles: [],
+    tunnels: [],
   };
 }
 
@@ -49,7 +49,7 @@ class Game {
     this.canvas.style.width = `${Math.round(rect.width)}px`;
     this.canvas.style.height = `${Math.round(rect.height)}px`;
     this.placeFood();
-    this.placeObstacles();
+    this.placeTunnels();
     this.raf = null;
   }
 
@@ -62,7 +62,7 @@ class Game {
     }
     this.resizeCanvas();
     this.placeFood();
-    this.placeObstacles();
+    this.placeTunnels();
     this.ui.updateHUD(this.state.score, this.state.highScore);
   }
 
@@ -103,8 +103,11 @@ class Game {
   placeFood() {
     const size = this.state.gridSize;
     const occupied = new Set(this.state.snake.map(s=>`${s.x},${s.y}`));
-    // also block obstacles
-    for (const ob of (this.state.obstacles||[])) occupied.add(`${ob.x},${ob.y}`);
+    // also block tunnel endpoints
+    for (const t of (this.state.tunnels||[])) {
+      if (t.a) occupied.add(`${t.a.x},${t.a.y}`);
+      if (t.b) occupied.add(`${t.b.x},${t.b.y}`);
+    }
     let tries = 0;
     while (tries < 1000) {
       const fx = Math.floor(Math.random()*size);
@@ -167,9 +170,17 @@ class Game {
     for (let seg of s.snake) {
       if (seg.x === head.x && seg.y === head.y) { this.onGameOver(); return; }
     }
-    // obstacle collision
-    for (const ob of (s.obstacles || [])) {
-      if (ob.x === head.x && ob.y === head.y) { this.onGameOver(); return; }
+    // tunnel teleport: if head lands on a tunnel endpoint, teleport to paired end
+    if (s.tunnels && s.tunnels.length) {
+      for (const t of s.tunnels) {
+        if (t.a && t.a.x === head.x && t.a.y === head.y) {
+          head.x = t.b.x; head.y = t.b.y;
+          break;
+        } else if (t.b && t.b.x === head.x && t.b.y === head.y) {
+          head.x = t.a.x; head.y = t.a.y;
+          break;
+        }
+      }
     }
 
     s.snake.unshift(head);
@@ -221,6 +232,33 @@ class Game {
       const color = colors[Math.floor(Math.random()*colors.length)];
       s.particles.push({x:cx, y:cy, vx, vy, size, ttl: life, life, color});
     }
+  }
+
+  placeTunnels() {
+    const s = this.state;
+    const size = s.gridSize;
+    const occupied = new Set(s.snake.map(x=>`${x.x},${x.y}`));
+    // avoid very near start
+    occupied.add(`${s.snake[0].x},${s.snake[0].y}`);
+    const tunnels = [];
+    const pairCount = Math.max(2, Math.floor(size * 0.06));
+    let tries = 0;
+    while (tunnels.length < pairCount && tries < 5000) {
+      const ax = Math.floor(Math.random()*size);
+      const ay = Math.floor(Math.random()*size);
+      const bx = Math.floor(Math.random()*size);
+      const by = Math.floor(Math.random()*size);
+      const ka = `${ax},${ay}`;
+      const kb = `${bx},${by}`;
+      tries++;
+      if (ka === kb) continue;
+      if (occupied.has(ka) || occupied.has(kb)) continue;
+      // ensure some distance between pair ends so tunnel is interesting
+      if (Math.abs(ax-bx) + Math.abs(ay-by) < 4) continue;
+      occupied.add(ka); occupied.add(kb);
+      tunnels.push({a:{x:ax,y:ay}, b:{x:bx,y:by}});
+    }
+    s.tunnels = tunnels;
   }
 
   onGameOver() {
@@ -279,6 +317,39 @@ class Game {
       ctx.shadowBlur = 12;
       ctx.fillRect(s.food.x*cs + 2, s.food.y*cs + 2, cs-4, cs-4);
       ctx.shadowBlur = 0;
+    }
+
+    // draw tunnels (visible portals)
+    if (s.tunnels && s.tunnels.length) {
+      for (const t of s.tunnels) {
+        try {
+          // draw both ends
+          for (const end of ['a','b']) {
+            const p = t[end];
+            const x = p.x*cs + cs/2;
+            const y = p.y*cs + cs/2;
+            // outer ring
+            ctx.beginPath();
+            ctx.lineWidth = Math.max(2, Math.floor(cs * 0.12));
+            ctx.strokeStyle = 'rgba(255,88,198,0.95)';
+            ctx.fillStyle = 'rgba(255,88,198,0.06)';
+            ctx.arc(x, y, Math.max(4, Math.floor(cs*0.36)), 0, Math.PI*2);
+            ctx.fill(); ctx.stroke();
+            // inner core
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.arc(x, y, Math.max(1, Math.floor(cs*0.12)), 0, Math.PI*2);
+            ctx.fill();
+          }
+          // draw connecting subtle line
+          const x1 = t.a.x*cs + cs/2, y1 = t.a.y*cs + cs/2;
+          const x2 = t.b.x*cs + cs/2, y2 = t.b.y*cs + cs/2;
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(255,88,198,0.06)';
+          ctx.lineWidth = Math.max(1, Math.floor(cs * 0.06));
+          ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+        } catch(e) {}
+      }
     }
 
     // draw snake
