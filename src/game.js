@@ -23,6 +23,11 @@ function createInitialState() {
     leaderboard: loadBoard(),
     audio: createAudioEngine(),
     muted: false,
+    // animation / visuals
+    headBlinkOffset: Math.random() * 2000,
+    lastEatAt: 0,
+    eatAnimDuration: 420,
+    tailTaperSegments: 6,
   };
 }
 
@@ -115,7 +120,7 @@ class Game {
     this.state.nextDir = {x:dx,y:dy};
   }
 
-  tick() {
+  tick(timestamp) {
     const s = this.state;
     // apply nextDir
     if (s.nextDir.x !== 0 || s.nextDir.y !== 0) s.dir = s.nextDir;
@@ -142,6 +147,8 @@ class Game {
     // eat food
     if (s.food && head.x === s.food.x && head.y === s.food.y) {
       s.score += 10;
+      // mark eat time for animation
+      s.lastEatAt = timestamp || performance.now();
       // increment bait counter
       s.foodEaten = (s.foodEaten || 0) + 1;
       s.audio.playEat();
@@ -191,13 +198,13 @@ class Game {
     const secondsPerMove = 1 / s.speed;
     if ((timestamp - s.lastMoveTime) / 1000 >= secondsPerMove) {
       s.lastMoveTime = timestamp;
-      this.tick();
+      this.tick(timestamp);
     }
-    this.render();
+    this.render(timestamp);
     this.raf = requestAnimationFrame((t)=>this.loop(t));
   }
 
-  render() {
+  render(timestamp) {
     const ctx = this.ctx;
     const s = this.state;
     const size = s.gridSize;
@@ -222,6 +229,18 @@ class Game {
     }
 
     // draw snake
+    const now = timestamp || performance.now();
+    // blinking parameters
+    const blinkInterval = 3000;
+    const blinkDuration = 160;
+    const blinkPhase = (now + (s.headBlinkOffset || 0)) % blinkInterval;
+    const isBlinking = blinkPhase < blinkDuration;
+    const blinkProgress = isBlinking ? (blinkPhase / blinkDuration) : 0;
+    // head pulsing
+    const basePulse = 1 + 0.08 * Math.sin(now / 220);
+    const eatenSince = now - (s.lastEatAt || 0);
+    const eatPulse = eatenSince < s.eatAnimDuration ? 1 + 0.25 * Math.sin((eatenSince / s.eatAnimDuration) * Math.PI * 2) : 1;
+
     for (let i=0;i<s.snake.length;i++){
       const seg = s.snake[i];
       const isHead = i === 0;
@@ -231,33 +250,40 @@ class Game {
         // clearer, stronger glowing head using radial gradient
         const cx = seg.x*cs + cs/2;
         const cy = seg.y*cs + cs/2;
-        const outerR = Math.max(6, Math.floor(cs * 0.9));
-        const innerR = Math.max(1, Math.floor(cs * 0.2));
+        const outerR = Math.max(6, Math.floor(cs * 0.9)) * basePulse * eatPulse;
+        const innerR = Math.max(1, Math.floor(cs * 0.18));
+        // head color: neon blue with white outline
+        const headCore = '#66d9ff';
         try {
           const g = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
           g.addColorStop(0, 'rgba(255,255,255,1)');
-          g.addColorStop(0.25, '#eafff4');
-          g.addColorStop(0.45, '#45ff89');
-          g.addColorStop(1, 'rgba(69,255,137,0.06)');
+          g.addColorStop(0.18, headCore);
+          g.addColorStop(0.45, headCore);
+          g.addColorStop(1, 'rgba(102,217,255,0.06)');
           ctx.fillStyle = g;
         } catch (e) {
-          ctx.fillStyle = '#ffffff';
+          ctx.fillStyle = headCore;
         }
 
         // draw outer glowing square slightly larger for emphasis
-        ctx.shadowColor = 'rgba(69,255,137,0.9)';
-        ctx.shadowBlur = Math.max(18, Math.floor(cs * 0.9));
+        ctx.shadowColor = 'rgba(102,217,255,0.95)';
+        ctx.shadowBlur = Math.max(14, Math.floor(cs * 0.9)) * basePulse * eatPulse;
         ctx.fillRect(seg.x*cs + 0.5, seg.y*cs + 0.5, cs-1, cs-1);
         ctx.shadowBlur = 0;
 
+        // white outline stroke
+        ctx.lineWidth = Math.max(1, Math.floor(cs * 0.08));
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.strokeRect(seg.x*cs + 0.5, seg.y*cs + 0.5, cs-1, cs-1);
+
         // inner neon core
-        ctx.fillStyle = '#0bff74';
+        ctx.fillStyle = headCore;
         const coreInset = Math.max(3, Math.floor(cs * 0.18));
         ctx.fillRect(seg.x*cs + coreInset, seg.y*cs + coreInset, Math.max(0, cs - coreInset*2), Math.max(0, cs - coreInset*2));
 
         // draw a small nose/point in movement direction to make facing obvious
         try {
-          ctx.fillStyle = '#ffffff';
+          ctx.fillStyle = 'rgba(255,255,255,0.95)';
           ctx.beginPath();
           const left = seg.x*cs + 2;
           const top = seg.y*cs + 2;
@@ -289,7 +315,7 @@ class Game {
           ctx.fill();
         } catch (e) {}
 
-        // draw larger eyes with bright highlight and dark pupil
+        // draw larger eyes with bright highlight and dark pupil, support blinking
         try {
           const eyeOffset = Math.max(1, Math.floor(cs * 0.22));
           let ex1 = cx - eyeOffset, ey1 = cy - Math.floor(cs * 0.12);
@@ -300,15 +326,35 @@ class Game {
           else if (s.dir.y === -1) { ey1 = cy - eyeOffset; ey2 = cy - eyeOffset; ex1 = cx - Math.floor(cs * 0.16); ex2 = cx + Math.floor(cs * 0.16); }
 
           const eyeR = Math.max(1, Math.floor(cs * 0.14));
-          // white sclera
-          ctx.fillStyle = 'rgba(255,255,255,0.95)';
-          ctx.beginPath(); ctx.arc(ex1, ey1, eyeR, 0, Math.PI*2); ctx.fill();
-          ctx.beginPath(); ctx.arc(ex2, ey2, eyeR, 0, Math.PI*2); ctx.fill();
+          const blinkScale = isBlinking ? (1 - (0.95 * (1 - blinkProgress))) : 1; // squish during blink
+          const eyeHeight = Math.max(1, Math.floor(eyeR * blinkScale));
+          // white sclera (draw as ellipse when blinking)
+          ctx.fillStyle = 'rgba(255,255,255,0.98)';
+          ctx.beginPath(); ctx.ellipse(ex1, ey1, eyeR, eyeHeight, 0, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(ex2, ey2, eyeR, eyeHeight, 0, 0, Math.PI*2); ctx.fill();
           // dark pupil
           ctx.fillStyle = 'rgba(8,12,16,0.98)';
           const pupR = Math.max(1, Math.floor(eyeR * 0.5));
           ctx.beginPath(); ctx.arc(ex1, ey1, pupR, 0, Math.PI*2); ctx.fill();
           ctx.beginPath(); ctx.arc(ex2, ey2, pupR, 0, Math.PI*2); ctx.fill();
+        } catch (e) {}
+
+        // draw mouth, animated when eating
+        try {
+          const mouthY = cy + Math.floor(cs * 0.22);
+          const baseMouthW = Math.floor(cs * 0.36);
+          let mouthOpen = 1 * (eatPulse - 1);
+          if (eatenSince < s.eatAnimDuration) {
+            mouthOpen = 1 + 1.2 * Math.sin((eatenSince / s.eatAnimDuration) * Math.PI * 2);
+          } else {
+            // small idle munching occasionally
+            mouthOpen = 1 + 0.08 * Math.sin(now / 160);
+          }
+          const mh = Math.max(1, Math.floor((baseMouthW * 0.25) * Math.abs(mouthOpen)));
+          ctx.fillStyle = 'rgba(8,12,16,0.96)';
+          ctx.beginPath();
+          ctx.ellipse(cx, mouthY, Math.floor(baseMouthW/2), mh, 0, 0, Math.PI*2);
+          ctx.fill();
         } catch (e) {}
 
         // reset shadow
@@ -318,7 +364,8 @@ class Game {
       }
 
       // draw tapered tail across the last few segments to make tail direction/ending clearer
-      const tailTaper = Math.min(4, Math.max(1, s.snake.length - 1));
+      const maxTaper = s.tailTaperSegments || 6;
+      const tailTaper = Math.min(maxTaper, Math.max(1, s.snake.length - 1));
       const tailStartIndex = s.snake.length - tailTaper;
       if (i >= tailStartIndex) {
         const idxFromTail = (s.snake.length - 1) - i; // 0 for last segment
